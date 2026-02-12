@@ -12,6 +12,7 @@ interface ControlPanelProps {
   onFrameWidthChange: (width: number) => void;
   onFrameColorChange: (color: string) => void;
   onFilterChange: (filter: string) => void;
+  onAspectRatioChange: (ratio: number) => void;
 }
 
 const FRAME_COLORS = [
@@ -23,12 +24,21 @@ const FRAME_COLORS = [
   "#2196F3",
   "#9C27B0",
 ];
+
 const FILTERS = ["None", "Sepia", "Grayscale", "Invert", "Warm", "Cool"];
+
+const ASPECT_RATIOS = [
+  { label: "1:1", value: 1 },
+  { label: "4:5", value: 0.8 },
+  { label: "16:9", value: 16 / 9 },
+  { label: "9:16", value: 9 / 16 },
+];
 
 export default function ControlPanel({
   onFrameWidthChange,
   onFrameColorChange,
   onFilterChange,
+  onAspectRatioChange,
 }: ControlPanelProps) {
   const [activeTab, setActiveTab] = useState<"frame" | "filter">("frame");
 
@@ -92,6 +102,23 @@ export default function ControlPanel({
                 />
               ))}
             </ScrollView>
+
+            <Text style={styles.label}>Aspect Ratio</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.ratioScroll}
+            >
+              {ASPECT_RATIOS.map((ratio) => (
+                <TouchableOpacity
+                  key={ratio.label}
+                  style={styles.ratioChip}
+                  onPress={() => onAspectRatioChange(ratio.value)}
+                >
+                  <Text style={styles.ratioText}>{ratio.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         ) : (
           <View>
@@ -152,7 +179,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   contentContainer: {
-    height: 150, // Fixed height for control panel content
+    height: 220, // Increased height to accommodate Aspect Ratio controls
   },
   label: {
     fontSize: 14,
@@ -162,6 +189,7 @@ const styles = StyleSheet.create({
   },
   colorScroll: {
     flexDirection: "row",
+    marginBottom: 10,
   },
   colorChip: {
     width: 40,
@@ -170,6 +198,23 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderWidth: 1,
     borderColor: "#ddd",
+  },
+  ratioScroll: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  ratioChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  ratioText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   filterChip: {
     paddingHorizontal: 15,

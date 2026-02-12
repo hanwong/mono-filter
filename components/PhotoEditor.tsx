@@ -20,6 +20,8 @@ export default function PhotoEditor() {
   const [frameWidth, setFrameWidth] = useState(0); // 0-50 padding percentage
   const [frameColor, setFrameColor] = useState("#FFFFFF");
   const [filterType, setFilterType] = useState("None");
+  const [aspectRatio, setAspectRatio] = useState(1);
+  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
 
   const pickImage = async () => {
     // Request permissions
@@ -34,8 +36,6 @@ export default function PhotoEditor() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, // Use built-in editor? Or disable to use our custom editor?
-      // Disable allowsEditing to get raw image for our editor
       allowsEditing: false,
       quality: 1,
     });
@@ -57,7 +57,10 @@ export default function PhotoEditor() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Button title="Pick Photo" onPress={pickImage} />
-        {/* <Button title="Save" onPress={saveImage} /> */}
+        <Button
+          title={isControlPanelOpen ? "Close" : "Edit"}
+          onPress={() => setIsControlPanelOpen(!isControlPanelOpen)}
+        />
       </View>
 
       <View style={styles.canvasWrapper}>
@@ -65,18 +68,21 @@ export default function PhotoEditor() {
           imageUri={imageUri}
           containerWidth={width - 40} // 20 padding each side
           containerHeight={width - 40} // Square canvas for now
-          aspectRatio={1} // Square
+          aspectRatio={aspectRatio}
           frameColor={frameColor}
           frameWidth={frameWidth}
           filterType={filterType}
         />
       </View>
 
-      <ControlPanel
-        onFrameWidthChange={setFrameWidth}
-        onFrameColorChange={setFrameColor}
-        onFilterChange={setFilterType}
-      />
+      {isControlPanelOpen && (
+        <ControlPanel
+          onFrameWidthChange={setFrameWidth}
+          onFrameColorChange={setFrameColor}
+          onFilterChange={setFilterType}
+          onAspectRatioChange={setAspectRatio}
+        />
+      )}
     </SafeAreaView>
   );
 }
