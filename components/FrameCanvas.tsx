@@ -1,5 +1,10 @@
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 
 interface FrameCanvasProps {
   imageUri: string | null;
@@ -20,6 +25,43 @@ export default function FrameCanvas({
   aspectRatio,
   filterType,
 }: FrameCanvasProps) {
+  // Shared Values for Gestures
+  const translationX = useSharedValue(0);
+  const translationY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const savedTranslationX = useSharedValue(0);
+  const savedTranslationY = useSharedValue(0);
+
+  // Gesture Definitions
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      savedTranslationX.value = translationX.value;
+      savedTranslationY.value = translationY.value;
+    })
+    .onUpdate((e) => {
+      translationX.value = savedTranslationX.value + e.translationX;
+      translationY.value = savedTranslationY.value + e.translationY;
+    });
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+    })
+    .onUpdate((e) => {
+      scale.value = savedScale.value * e.scale;
+    });
+
+  const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translationX.value },
+      { translateY: translationY.value },
+      { scale: scale.value },
+    ],
+  }));
+
   if (!imageUri) {
     return (
       <View
@@ -36,7 +78,6 @@ export default function FrameCanvas({
   }
 
   // 1. Determine Frame Size (Outer Box)
-  // Logic: Fit within container while maintaining aspectRatio
   let frameDisplayWidth = containerWidth;
   let frameDisplayHeight = containerWidth / aspectRatio;
 
@@ -46,28 +87,13 @@ export default function FrameCanvas({
   }
 
   // 2. Calculate Image Size (Inner Box)
-  // frameWidth is % of min dimension
   const minDimension = Math.min(frameDisplayWidth, frameDisplayHeight);
-  const padding = (minDimension * frameWidth) / 100; // Total padding budget
-  // Note: frameWidth is 0-50, so max padding is 50% of dimension (which means 0 size image)
-  // Actually padding should be applied to both sides?
-  // If frameWidth is 10, does it mean 10% border on each side? Or 10% total reduction?
-  // Let's assume frameWidth is percentage of the dimension that is border.
-  // Example: frameWidth 10 => 10% border thickness relative to minDimension?
-  // Let's stick to: image size = dimension - (dimension * frameWidth / 100 * 2)
-  // No, let's use straightforward pixel padding calculation based on % of minDimension.
-  // Padding per side = (minDimension * frameWidth / 100)
-
   const paddingPx = (minDimension * frameWidth) / 100;
 
-  const imageDisplayWidth = frameDisplayWidth - paddingPx * 2;
-  const imageDisplayHeight = frameDisplayHeight - paddingPx * 2;
+  const finalImageWidth = Math.max(0, frameDisplayWidth - paddingPx * 2);
+  const finalImageHeight = Math.max(0, frameDisplayHeight - paddingPx * 2);
 
-  // Ensure dimensions are positive
-  const finalImageWidth = Math.max(0, imageDisplayWidth);
-  const finalImageHeight = Math.max(0, imageDisplayHeight);
-
-  // Filter Logic (Simple Overlay)
+  // Filter Logic
   const getFilterStyle = (type: string) => {
     switch (type) {
       case "Sepia":
@@ -77,7 +103,7 @@ export default function FrameCanvas({
       case "Cool":
         return { backgroundColor: "#0099ff", opacity: 0.2 };
       case "Grayscale":
-        return { backgroundColor: "#333333", opacity: 0.5 }; // Poor man's grayscale
+        return { backgroundColor: "#333333", opacity: 0.5 };
       case "Invert":
         return { backgroundColor: "#fff", opacity: 0.1 };
       default:
@@ -106,31 +132,48 @@ export default function FrameCanvas({
           backgroundColor: frameColor,
           justifyContent: "center",
           alignItems: "center",
-          overflow: "hidden", // Ensure image doesn't bleed out
+          overflow: "hidden", // Outer container clips everything
         }}
       >
-        {/* The Image */}
-        <Image
-          source={{ uri: imageUri }}
+        {/* Clipping View for Image */}
+        <View
           style={{
             width: finalImageWidth,
             height: finalImageHeight,
+            overflow: "hidden", // This clips the image to the inner frame
+            backgroundColor: "#000", // Optional: placeholder color
           }}
-          resizeMode="cover" // Use cover because we calculated exact dimensions
-        />
+        >
+          <GestureDetector gesture={composedGesture}>
+            <Animated.View
+              style={[
+                {
+                  width: finalImageWidth,
+                  height: finalImageHeight,
+                },
+                animatedStyle,
+              ]}
+            >
+              {/* The Image */}
+              <Image
+                source={{ uri: imageUri }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                }}
+                resizeMode="cover"
+              />
 
-        {/* Filter Overlay on Image Only */}
-        {filterStyle && (
-          <View
-            style={{
-              position: "absolute",
-              width: finalImageWidth,
-              height: finalImageHeight,
-              ...filterStyle,
-            }}
-            pointerEvents="none"
-          />
-        )}
+              {/* Filter Overlay */}
+              {filterStyle && (
+                <View
+                  style={[StyleSheet.absoluteFill, filterStyle]}
+                  pointerEvents="none"
+                />
+              )}
+            </Animated.View>
+          </GestureDetector>
+        </View>
       </View>
     </View>
   );
