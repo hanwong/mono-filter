@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
+import { StatusBar } from "expo-status-bar";
 import React, { useRef, useState } from "react";
 import {
   Alert,
@@ -8,6 +9,7 @@ import {
   SafeAreaView,
   StyleSheet,
   View,
+  useColorScheme,
 } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
@@ -79,8 +81,13 @@ export default function PhotoEditor() {
     }
   };
 
+  const colorScheme = useColorScheme();
+  const themeContainerStyle =
+    colorScheme === "light" ? styles.lightContainer : styles.darkContainer;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, themeContainerStyle]}>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View style={styles.header}>
         <Button title="Pick Photo" onPress={pickImage} />
         {imageUri && <Button title="Save" onPress={saveImage} />}
@@ -119,7 +126,12 @@ export default function PhotoEditor() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#333", // Dark background for editor
+  },
+  lightContainer: {
+    backgroundColor: "#fff",
+  },
+  darkContainer: {
+    backgroundColor: "#333",
   },
   header: {
     flexDirection: "row",
