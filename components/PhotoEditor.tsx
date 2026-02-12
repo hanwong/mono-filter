@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import * as MediaLibrary from "expo-media-library";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -8,7 +9,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-// Note: verify if view-shot is needed for saving, but for now placeholder logic
+import { captureRef } from "react-native-view-shot";
 
 import ControlPanel from "./ControlPanel";
 import FrameCanvas from "./FrameCanvas";
@@ -22,6 +23,9 @@ export default function PhotoEditor() {
   const [filterType, setFilterType] = useState("None");
   const [aspectRatio, setAspectRatio] = useState(1);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
+
+  const viewRef = useRef<View>(null);
+  const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
   const pickImage = async () => {
     // Request permissions
@@ -46,17 +50,40 @@ export default function PhotoEditor() {
   };
 
   const saveImage = async () => {
-    // Placeholder for saving logic
-    Alert.alert(
-      "Save",
-      "Saving logic requires view capture library like react-native-view-shot.",
-    );
+    if (!imageUri) return;
+
+    try {
+      if (permissionResponse?.status !== "granted") {
+        const { status } = await requestPermission();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission needed",
+            "We need permission to save the image.",
+          );
+          return;
+        }
+      }
+
+      const localUri = await captureRef(viewRef, {
+        format: "png",
+        quality: 1,
+      });
+
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      if (localUri) {
+        Alert.alert("Saved!", "Your image has been saved to the gallery.");
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Error", "Failed to save the image.");
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Button title="Pick Photo" onPress={pickImage} />
+        {imageUri && <Button title="Save" onPress={saveImage} />}
         <Button
           title={isControlPanelOpen ? "Close" : "Edit"}
           onPress={() => setIsControlPanelOpen(!isControlPanelOpen)}
@@ -64,15 +91,17 @@ export default function PhotoEditor() {
       </View>
 
       <View style={styles.canvasWrapper}>
-        <FrameCanvas
-          imageUri={imageUri}
-          containerWidth={width - 40} // 20 padding each side
-          containerHeight={width - 40} // Square canvas for now
-          aspectRatio={aspectRatio}
-          frameColor={frameColor}
-          frameWidth={frameWidth}
-          filterType={filterType}
-        />
+        <View ref={viewRef} collapsable={false}>
+          <FrameCanvas
+            imageUri={imageUri}
+            containerWidth={width - 40} // 20 padding each side
+            containerHeight={width - 40} // Square canvas for now
+            aspectRatio={aspectRatio}
+            frameColor={frameColor}
+            frameWidth={frameWidth}
+            filterType={filterType}
+          />
+        </View>
       </View>
 
       {isControlPanelOpen && (
