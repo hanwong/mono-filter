@@ -1,7 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState } from "react";
+import { useAtom, useSetAtom } from "jotai";
+import React, { useRef } from "react";
 import {
   Alert,
   Button,
@@ -13,18 +14,17 @@ import {
 } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
+import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";
 import ControlPanel from "./ControlPanel";
 import FrameCanvas from "./FrameCanvas";
 
 const { width } = Dimensions.get("window");
 
 export default function PhotoEditor() {
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [frameWidth, setFrameWidth] = useState(0); // 0-50 padding percentage
-  const [frameColor, setFrameColor] = useState("#FFFFFF");
-  const [filterType, setFilterType] = useState("None");
-  const [aspectRatio, setAspectRatio] = useState(1);
-  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
+  const [state, setState] = useAtom(editorStateAtom);
+  const { imageUri, isControlPanelOpen } = state;
+
+  const setImageWithReset = useSetAtom(setImageWithResetAtom);
 
   const viewRef = useRef<View>(null);
   const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
@@ -47,7 +47,7 @@ export default function PhotoEditor() {
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      setImageWithReset(result.assets[0].uri);
     }
   };
 
@@ -93,32 +93,25 @@ export default function PhotoEditor() {
         {imageUri && <Button title="Save" onPress={saveImage} />}
         <Button
           title={isControlPanelOpen ? "Close" : "Edit"}
-          onPress={() => setIsControlPanelOpen(!isControlPanelOpen)}
+          onPress={() =>
+            setState((prev) => ({
+              ...prev,
+              isControlPanelOpen: !prev.isControlPanelOpen,
+            }))
+          }
         />
       </View>
 
       <View style={styles.canvasWrapper}>
         <View ref={viewRef} collapsable={false}>
           <FrameCanvas
-            imageUri={imageUri}
             containerWidth={width - 40} // 20 padding each side
             containerHeight={width - 40} // Square canvas for now
-            aspectRatio={aspectRatio}
-            frameColor={frameColor}
-            frameWidth={frameWidth}
-            filterType={filterType}
           />
         </View>
       </View>
 
-      {isControlPanelOpen && (
-        <ControlPanel
-          onFrameWidthChange={setFrameWidth}
-          onFrameColorChange={setFrameColor}
-          onFilterChange={setFilterType}
-          onAspectRatioChange={setAspectRatio}
-        />
-      )}
+      {isControlPanelOpen && <ControlPanel />}
     </SafeAreaView>
   );
 }

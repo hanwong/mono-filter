@@ -1,30 +1,70 @@
-import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import {
+  Canvas,
+  ColorMatrix,
+  Group,
+  Image,
+  Rect,
+  RuntimeShader,
+  Skia,
+  useImage,
+} from "@shopify/react-native-skia";
+import { useAtomValue } from "jotai";
+import React, { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
 } from "react-native-reanimated";
 
+import { GRAIN_SHADER, VIGNETTE_SHADER } from "../constants/shaders";
+import { editorStateAtom } from "../store/atoms";
+
 interface FrameCanvasProps {
-  imageUri: string | null;
   containerWidth: number;
   containerHeight: number;
-  frameColor: string;
-  frameWidth: number; // 0 to 50 representing percentage of padding
-  aspectRatio: number; // e.g., 1 (Square), 4/5, 9/16
-  filterType: string;
 }
 
+const FILTERS: { [key: string]: number[] } = {
+  None: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+  Sepia: [
+    0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131,
+    0, 0, 0, 0, 0, 1, 0,
+  ],
+  Grayscale: [
+    0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152,
+    0.0722, 0, 0, 0, 0, 0, 1, 0,
+  ],
+  Invert: [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0],
+  Warm: [1.06, 0, 0, 0, 0, 0, 1.01, 0, 0, 0, 0, 0, 0.93, 0, 0, 0, 0, 0, 1, 0],
+  Cool: [0.95, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1.08, 0, 0, 0, 0, 0, 1, 0],
+};
+
 export default function FrameCanvas({
-  imageUri,
   containerWidth,
   containerHeight,
-  frameColor,
-  frameWidth,
-  aspectRatio,
-  filterType,
 }: FrameCanvasProps) {
+  const state = useAtomValue(editorStateAtom);
+  const {
+    imageUri,
+    frameColor,
+    frameWidth,
+    aspectRatio,
+    filterType,
+    backgroundColor,
+    grain: grainStrength,
+    vignette: vignetteStrength,
+  } = state;
+
+  const skiaImage = useImage(imageUri || "");
+
+  // Pre-compile shaders (Must be before any early return)
+  const grainEffect = useMemo(() => Skia.RuntimeEffect.Make(GRAIN_SHADER), []);
+  const vignetteEffect = useMemo(
+    () => Skia.RuntimeEffect.Make(VIGNETTE_SHADER),
+    [],
+  );
+
   // Shared Values for Gestures
   const translationX = useSharedValue(0);
   const translationY = useSharedValue(0);
@@ -54,13 +94,14 @@ export default function FrameCanvas({
 
   const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
+  // Derived transform for Skia Image
+  const transform = useDerivedValue(() => {
+    return [
       { translateX: translationX.value },
       { translateY: translationY.value },
       { scale: scale.value },
-    ],
-  }));
+    ];
+  });
 
   if (!imageUri) {
     return (
@@ -77,7 +118,7 @@ export default function FrameCanvas({
     );
   }
 
-  // 1. Determine Frame Size (Outer Box)
+  // 1. Determine Frame Size and Position (Centered in Container)
   let frameDisplayWidth = containerWidth;
   let frameDisplayHeight = containerWidth / aspectRatio;
 
@@ -86,95 +127,101 @@ export default function FrameCanvas({
     frameDisplayWidth = containerHeight * aspectRatio;
   }
 
+  const frameX = (containerWidth - frameDisplayWidth) / 2;
+  const frameY = (containerHeight - frameDisplayHeight) / 2;
+
   // 2. Calculate Image Size (Inner Box)
   const minDimension = Math.min(frameDisplayWidth, frameDisplayHeight);
   const paddingPx = (minDimension * frameWidth) / 100;
 
-  const finalImageWidth = Math.max(0, frameDisplayWidth - paddingPx * 2);
-  const finalImageHeight = Math.max(0, frameDisplayHeight - paddingPx * 2);
-
-  // Filter Logic
-  const getFilterStyle = (type: string) => {
-    switch (type) {
-      case "Sepia":
-        return { backgroundColor: "#704214", opacity: 0.3 };
-      case "Warm":
-        return { backgroundColor: "#ff9900", opacity: 0.2 };
-      case "Cool":
-        return { backgroundColor: "#0099ff", opacity: 0.2 };
-      case "Grayscale":
-        return { backgroundColor: "#333333", opacity: 0.5 };
-      case "Invert":
-        return { backgroundColor: "#fff", opacity: 0.1 };
-      default:
-        return null;
-    }
-  };
-
-  const filterStyle = getFilterStyle(filterType);
+  const imageX = frameX + paddingPx;
+  const imageY = frameY + paddingPx;
+  const imageW = Math.max(0, frameDisplayWidth - paddingPx * 2);
+  const imageH = Math.max(0, frameDisplayHeight - paddingPx * 2);
 
   return (
-    <View
-      style={[
-        styles.centerContent,
-        {
-          width: containerWidth,
-          height: containerHeight,
-          backgroundColor: "transparent",
-        },
-      ]}
-    >
-      {/* The Frame Background */}
-      <View
-        style={{
-          width: frameDisplayWidth,
-          height: frameDisplayHeight,
-          backgroundColor: frameColor,
-          justifyContent: "center",
-          alignItems: "center",
-          overflow: "hidden", // Outer container clips everything
-        }}
-      >
-        {/* Clipping View for Image */}
-        <View
-          style={{
-            width: finalImageWidth,
-            height: finalImageHeight,
-            overflow: "hidden", // This clips the image to the inner frame
-            backgroundColor: "#000", // Optional: placeholder color
-          }}
-        >
-          <GestureDetector gesture={composedGesture}>
-            <Animated.View
-              style={[
-                {
-                  width: finalImageWidth,
-                  height: finalImageHeight,
-                },
-                animatedStyle,
-              ]}
+    <View style={{ width: containerWidth, height: containerHeight }}>
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View style={{ flex: 1 }}>
+          <Canvas style={{ flex: 1 }}>
+            {/* Draw Frame Background */}
+            <Rect
+              x={frameX}
+              y={frameY}
+              width={frameDisplayWidth}
+              height={frameDisplayHeight}
+              color={frameColor}
+            />
+
+            {/* Draw Image Content with Clipping */}
+            <Group
+              clip={{ x: imageX, y: imageY, width: imageW, height: imageH }}
             >
-              {/* The Image */}
-              <Image
-                source={{ uri: imageUri }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                }}
-                resizeMode="cover"
+              {/* Background behind the image (seen if transparent image or loading) */}
+              <Rect
+                x={imageX}
+                y={imageY}
+                width={imageW}
+                height={imageH}
+                color={backgroundColor}
               />
 
-              {/* Filter Overlay */}
-              {filterStyle && (
-                <View
-                  style={[StyleSheet.absoluteFill, filterStyle]}
-                  pointerEvents="none"
-                />
+              {skiaImage && (
+                <Image
+                  image={skiaImage}
+                  x={imageX}
+                  y={imageY}
+                  width={imageW}
+                  height={imageH}
+                  fit="cover"
+                  transform={transform}
+                >
+                  {FILTERS[filterType] && (
+                    <ColorMatrix matrix={FILTERS[filterType]} />
+                  )}
+                </Image>
               )}
-            </Animated.View>
-          </GestureDetector>
-        </View>
-      </View>
+
+              {/* Grain Layer */}
+              {grainStrength > 0 && grainEffect && (
+                <Rect
+                  x={imageX}
+                  y={imageY}
+                  width={imageW}
+                  height={imageH}
+                  blendMode="overlay"
+                >
+                  <RuntimeShader
+                    source={grainEffect}
+                    uniforms={{
+                      intensity: grainStrength,
+                    }}
+                  />
+                </Rect>
+              )}
+
+              {/* Vignette Layer */}
+              {vignetteStrength > 0 && vignetteEffect && (
+                <Rect
+                  x={imageX}
+                  y={imageY}
+                  width={imageW}
+                  height={imageH}
+                  blendMode="srcOver"
+                >
+                  <RuntimeShader
+                    source={vignetteEffect}
+                    uniforms={{
+                      resolution: [imageW, imageH],
+                      intensity: vignetteStrength,
+                    }}
+                  />
+                </Rect>
+              )}
+            </Group>
+          </Canvas>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
