@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { editorStateAtom } from "../store/atoms";
+import ScrollableContainer from "./ui/ScrollableContainer";
 
 const FILTERS = ["None", "Sepia", "Grayscale", "Invert", "Warm", "Cool"];
 
@@ -21,7 +22,10 @@ export default function FilterControls() {
   } = state;
 
   return (
-    <View>
+    <ScrollableContainer
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.label}>Select Filter</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {FILTERS.map((filter) => (
@@ -32,11 +36,18 @@ export default function FilterControls() {
               selectedFilter === filter && styles.activeFilterChip,
             ]}
             onPress={() =>
-              setState((prev) => ({ ...prev, filterType: filter }))
+              setState((prev) => ({
+                ...prev,
+                filterType: filter,
+                ...(filter === "None" ? { grain: 0, vignette: 0 } : {}),
+              }))
             }
           >
             <Text
-              style={[selectedFilter === filter && styles.activeFilterText]}
+              style={[
+                styles.filterText,
+                selectedFilter === filter && styles.activeFilterText,
+              ]}
             >
               {filter}
             </Text>
@@ -45,11 +56,11 @@ export default function FilterControls() {
       </ScrollView>
 
       {selectedFilter !== "None" && (
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: 10 }}>
           <Text style={styles.label}>Grain</Text>
           <Slider
             key="grain-slider"
-            containerStyle={{ width: "100%", height: 40 }}
+            containerStyle={{ width: "100%", height: 30 }}
             minimumValue={0}
             maximumValue={1}
             step={0.05}
@@ -64,7 +75,7 @@ export default function FilterControls() {
           <Text style={styles.label}>Vignette</Text>
           <Slider
             key="vignette-slider"
-            containerStyle={{ width: "100%", height: 40 }}
+            containerStyle={{ width: "100%", height: 30 }}
             minimumValue={0}
             maximumValue={1}
             step={0.05}
@@ -77,26 +88,38 @@ export default function FilterControls() {
           />
         </View>
       )}
-    </View>
+      <View style={{ height: 20 }} />
+    </ScrollableContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
-    marginBottom: 10,
-    marginTop: 10,
+    marginBottom: 5,
+    marginTop: 5,
+    color: "#333", // Dark text
   },
   filterChip: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
-    marginRight: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    backgroundColor: "#f5f5f5",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
   },
   activeFilterChip: {
     backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  filterText: {
+    fontSize: 11,
+    color: "#333",
   },
   activeFilterText: {
     color: "#fff",

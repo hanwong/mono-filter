@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { editorStateAtom } from "../store/atoms";
+import ScrollableContainer from "./ui/ScrollableContainer";
 
 // Trendy Colors 2024/2025
 const FRAME_COLORS = [
@@ -43,11 +44,14 @@ export default function FrameControls() {
   const { frameWidth: currentFrameWidth } = state;
 
   return (
-    <View>
+    <ScrollableContainer
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.label}>Frame Width {" " + currentFrameWidth}</Text>
       <Slider
         key="frame-width-slider"
-        containerStyle={{ width: "100%", height: 40 }}
+        containerStyle={{ width: "100%", height: 30 }}
         minimumValue={0}
         maximumValue={50} // 50% max padding
         step={1}
@@ -109,44 +113,50 @@ export default function FrameControls() {
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </View>
+      <View style={{ height: 20 }} />
+    </ScrollableContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
-    marginBottom: 10,
-    marginTop: 10,
+    marginBottom: 5,
+    marginTop: 5,
+    color: "#333", // Dark gray text
   },
   colorScroll: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   colorChip: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e0e0e0", // Slightly darker border
   },
   ratioScroll: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   ratioChip: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
-    marginRight: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    backgroundColor: "#f5f5f5", // Light gray bg
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e0e0e0",
   },
   ratioText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
+    color: "#333", // Dark text
   },
 });

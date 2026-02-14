@@ -37,7 +37,7 @@ export const setImageWithResetAtom = atom(
     set(editorStateAtom, {
       ...defaultState,
       imageUri: uri,
-      isControlPanelOpen: !!uri,
+      isControlPanelOpen: false,
     });
   },
 );

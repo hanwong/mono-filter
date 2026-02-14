@@ -72,24 +72,64 @@ export default function FrameCanvas({
   const savedScale = useSharedValue(1);
   const savedTranslationX = useSharedValue(0);
   const savedTranslationY = useSharedValue(0);
+  const isPinching = useSharedValue(false);
+  const startFocalX = useSharedValue(0);
+  const startFocalY = useSharedValue(0);
 
   // Gesture Definitions
   const panGesture = Gesture.Pan()
+    .maxPointers(1) // Single finger pan only
     .onStart(() => {
+      if (isPinching.value) return;
       savedTranslationX.value = translationX.value;
       savedTranslationY.value = translationY.value;
     })
     .onUpdate((e) => {
+      if (isPinching.value) return;
       translationX.value = savedTranslationX.value + e.translationX;
       translationY.value = savedTranslationY.value + e.translationY;
     });
 
   const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
+    .onStart((e) => {
+      isPinching.value = true;
       savedScale.value = scale.value;
+
+      // Calculate the start focal point in the image's coordinate space
+      // focalX/Y are screen coordinates relative to the view
+      startFocalX.value = e.focalX;
+      startFocalY.value = e.focalY;
+
+      savedTranslationX.value = translationX.value;
+      savedTranslationY.value = translationY.value;
     })
     .onUpdate((e) => {
+      if (e.numberOfPointers < 2) return;
       scale.value = savedScale.value * e.scale;
+
+      // Calculate how much the focal point should move to stay under fingers
+      // New Image Coordinate = (Screen Coordinate - Translation) / Scale
+
+      // We want the point under the finger (e.focal) to remain the same point on the image
+      // (startFocal - savedTranslation) / savedScale === (e.focal - newTranslation) / scale
+
+      // Therefore:
+      // newTranslation = e.focal - scale * ((startFocal - savedTranslation) / savedScale)
+
+      const focalX = e.focalX;
+      const focalY = e.focalY;
+
+      // The point on the image we started pinching at
+      const pointX =
+        (startFocalX.value - savedTranslationX.value) / savedScale.value;
+      const pointY =
+        (startFocalY.value - savedTranslationY.value) / savedScale.value;
+
+      translationX.value = focalX - scale.value * pointX;
+      translationY.value = focalY - scale.value * pointY;
+    })
+    .onEnd(() => {
+      isPinching.value = false;
     });
 
   const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
@@ -139,6 +179,25 @@ export default function FrameCanvas({
   const imageW = Math.max(0, frameDisplayWidth - paddingPx * 2);
   const imageH = Math.max(0, frameDisplayHeight - paddingPx * 2);
 
+  // 3. Calculate Image Render Dimensions (Fill Width)
+  let renderX = imageX;
+  let renderY = imageY;
+  let renderW = imageW;
+  let renderH = imageH;
+
+  if (skiaImage) {
+    const imgW = skiaImage.width();
+    const imgH = skiaImage.height();
+    const imgAspectRatio = imgW / imgH;
+
+    // Fill Width Strategy
+    renderW = imageW;
+    renderH = renderW / imgAspectRatio;
+
+    // Center Vertically
+    renderY = imageY + (imageH - renderH) / 2;
+  }
+
   return (
     <View style={{ width: containerWidth, height: containerHeight }}>
       <GestureDetector gesture={composedGesture}>
@@ -169,11 +228,11 @@ export default function FrameCanvas({
               {skiaImage && (
                 <Image
                   image={skiaImage}
-                  x={imageX}
-                  y={imageY}
-                  width={imageW}
-                  height={imageH}
-                  fit="cover"
+                  x={renderX}
+                  y={renderY}
+                  width={renderW}
+                  height={renderH}
+                  fit="fill"
                   transform={transform}
                 >
                   {FILTERS[filterType] && (

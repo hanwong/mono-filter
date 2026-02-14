@@ -112,7 +112,10 @@ export const TabsContent = ({
   // Keep mounted but hidden
   return (
     <View
-      style={[style, { display: context.value === value ? "flex" : "none" }]}
+      style={[
+        style,
+        { display: context.value === value ? "flex" : "none", flex: 1 },
+      ]}
     >
       {children}
     </View>
