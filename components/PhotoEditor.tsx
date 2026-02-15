@@ -156,11 +156,7 @@ export default function PhotoEditor() {
         </View>
       </View>
 
-      {imageUri && (
-        <View style={styles.controlPanelOverlay}>
-          <ControlPanel />
-        </View>
-      )}
+      {imageUri && <ControlPanel />}
 
       {/* Full-screen loading overlay */}
       <Modal visible={saving} transparent animationType="fade">
@@ -199,7 +195,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    // Ensure background is transparent or matches so shadow looks good
+    paddingBottom: 48,
   },
   shadowContainer: {
     shadowColor: "#000",
@@ -215,13 +211,6 @@ const styles = StyleSheet.create({
     // But for the shadow to look like it's coming from the frame,
     // the shadow path usually follows the opaqueness.
     // If FrameCanvas is a rect, it should be fine.
-  },
-  controlPanelOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 20,
   },
   loadingOverlay: {
     flex: 1,

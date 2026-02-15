@@ -1,103 +1,133 @@
-import { useAtom } from "jotai";
-import React, { useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { BlurView } from "expo-blur";
+import React, { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { editorStateAtom } from "../store/atoms";
+
 import FilterControls from "./FilterControls";
 import FrameControls from "./FrameControls";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/Tabs";
+
+type TabType = "frame" | "filter";
+
+const DRAWER_HEIGHT = 200;
 
 export default function ControlPanel() {
-  const [state, setState] = useAtom(editorStateAtom);
-  const { isControlPanelOpen } = state;
+  const [activeTab, setActiveTab] = useState<TabType | null>(null);
+  const drawerHeight = useSharedValue(0);
 
-  const translateY = useSharedValue(0);
-
-  useEffect(() => {
-    if (isControlPanelOpen) {
-      translateY.value = withTiming(0, { duration: 300 });
+  const toggleTab = (tab: TabType) => {
+    if (activeTab === tab) {
+      setActiveTab(null);
+      drawerHeight.value = withTiming(0, { duration: 250 });
     } else {
-      translateY.value = withTiming(210, { duration: 300 });
+      setActiveTab(tab);
+      drawerHeight.value = withTiming(DRAWER_HEIGHT, { duration: 250 });
     }
-  }, [isControlPanelOpen]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
-
-  const togglePanel = () => {
-    setState((prev) => ({
-      ...prev,
-      isControlPanelOpen: !prev.isControlPanelOpen,
-    }));
   };
 
-  return (
-    <Animated.View style={[styles.container, animatedStyle]}>
-      <TouchableOpacity activeOpacity={1} onPress={togglePanel}>
-        <View style={styles.handleContainer}>
-          <View style={styles.handle} />
-        </View>
-      </TouchableOpacity>
+  const drawerStyle = useAnimatedStyle(() => ({
+    height: drawerHeight.value,
+    overflow: "hidden" as const,
+  }));
 
-      <Tabs defaultValue="frame">
+  return (
+    <View style={styles.wrapper}>
+      {/* Drawer content with blur background */}
+      <Animated.View style={[styles.drawer, drawerStyle]}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={styles.drawerInner}>
+          {activeTab === "frame" && <FrameControls />}
+          {activeTab === "filter" && <FilterControls />}
+        </View>
+      </Animated.View>
+
+      {/* Bottom bar buttons */}
+      <View style={styles.buttonRow}>
         <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => !isControlPanelOpen && togglePanel()}
+          style={[
+            styles.tabButton,
+            activeTab === "frame" && styles.tabButtonActive,
+          ]}
+          onPress={() => toggleTab("frame")}
+          activeOpacity={0.8}
         >
-          <TabsList>
-            <TabsTrigger value="frame">Frame</TabsTrigger>
-            <TabsTrigger value="filter">Filter</TabsTrigger>
-          </TabsList>
+          <Text
+            style={[
+              styles.tabButtonText,
+              activeTab === "frame" && styles.tabButtonTextActive,
+            ]}
+          >
+            Frame
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.contentContainer}>
-          <TabsContent value="frame">
-            <FrameControls />
-          </TabsContent>
-          <TabsContent value="filter">
-            <FilterControls />
-          </TabsContent>
-        </View>
-      </Tabs>
-    </Animated.View>
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            styles.tabButtonRight,
+            activeTab === "filter" && styles.tabButtonActive,
+          ]}
+          onPress={() => toggleTab("filter")}
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.tabButtonText,
+              activeTab === "filter" && styles.tabButtonTextActive,
+            ]}
+          >
+            Filter
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.95)", // Slightly more opaque
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    paddingBottom: 20, // Extra padding for safe area
+  wrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  handleContainer: {
+  drawer: {
+    backgroundColor: "#ffffffdc",
+  },
+  drawerInner: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  buttonRow: {
+    flexDirection: "row",
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 14,
     alignItems: "center",
-    paddingBottom: 10,
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#000000",
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#ccc",
+  tabButtonRight: {
+    borderLeftWidth: 1,
+    borderLeftColor: "#000000",
   },
-  contentContainer: {
-    paddingTop: 10,
-    height: 160,
+  tabButtonActive: {
+    backgroundColor: "#000000",
+    borderTopColor: "#000000",
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000000",
+  },
+  tabButtonTextActive: {
+    color: "#ffffff",
   },
 });

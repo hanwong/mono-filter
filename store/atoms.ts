@@ -7,7 +7,6 @@ export interface EditorState {
   backgroundColor: string;
   filterType: string;
   aspectRatio: number;
-  isControlPanelOpen: boolean;
   grain: number;
   vignette: number;
 }
@@ -19,7 +18,6 @@ const defaultState: EditorState = {
   backgroundColor: "#000000",
   filterType: "None",
   aspectRatio: 1,
-  isControlPanelOpen: false,
   grain: 0,
   vignette: 0,
 };
@@ -37,7 +35,6 @@ export const setImageWithResetAtom = atom(
     set(editorStateAtom, {
       ...defaultState,
       imageUri: uri,
-      isControlPanelOpen: false,
     });
   },
 );
