@@ -11,7 +11,15 @@ import {
 import { editorStateAtom } from "../store/atoms";
 import ScrollableContainer from "./ui/ScrollableContainer";
 
-const FILTERS = ["None", "Sepia", "Grayscale", "Invert", "Warm", "Cool"];
+const FILTERS = [
+  "None",
+  "Sepia",
+  "Grayscale",
+  "Film BW",
+  "Invert",
+  "Warm",
+  "Cool",
+];
 
 export default function FilterControls() {
   const [state, setState] = useAtom(editorStateAtom);

@@ -1,32 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useImage } from "@shopify/react-native-skia";
+import { File as ExpoFile, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 import { useAtom, useSetAtom } from "jotai";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
+  Modal,
   SafeAreaView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
-import { captureRef } from "react-native-view-shot";
 
 import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";
+import { renderOffscreen } from "../utils/offscreenRender";
 import ControlPanel from "./ControlPanel";
 import FrameCanvas from "./FrameCanvas";
 
 export default function PhotoEditor() {
-  const [state, setState] = useAtom(editorStateAtom);
+  const [state] = useAtom(editorStateAtom);
   const { imageUri } = state;
 
   const setImageWithReset = useSetAtom(setImageWithResetAtom);
 
   const viewRef = useRef<View>(null);
   const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
+  const skiaImage = useImage(imageUri || "");
+  const [saving, setSaving] = useState(false);
 
   const pickImage = async () => {
     // Request permissions
@@ -50,8 +56,25 @@ export default function PhotoEditor() {
     }
   };
 
+  const themeContainerStyle = styles.lightContainer;
+  const iconColor = "#000000";
+
+  const { width, height } = Dimensions.get("window");
+
+  // Adaptive Sizing Logic
+  const MAX_WIDTH = width - 20;
+  const MAX_HEIGHT = height * 0.75;
+
+  let canvasWidth = MAX_WIDTH;
+  let canvasHeight = canvasWidth / state.aspectRatio;
+
+  if (canvasHeight > MAX_HEIGHT) {
+    canvasHeight = MAX_HEIGHT;
+    canvasWidth = canvasHeight * state.aspectRatio;
+  }
+
   const saveImage = async () => {
-    if (!imageUri) return;
+    if (!imageUri || !skiaImage) return;
 
     try {
       if (permissionResponse?.status !== "granted") {
@@ -65,39 +88,48 @@ export default function PhotoEditor() {
         }
       }
 
-      const localUri = await captureRef(viewRef, {
-        format: "png",
-        quality: 1,
+      setSaving(true);
+
+      // Small delay to let the loading UI render
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Render at original image resolution using Skia offscreen surface
+      const bytes = renderOffscreen({
+        image: skiaImage,
+        aspectRatio: state.aspectRatio,
+        frameWidth: state.frameWidth,
+        frameColor: state.frameColor,
+        backgroundColor: state.backgroundColor,
+        filterType: state.filterType,
+        grain: state.grain,
+        vignette: state.vignette,
       });
 
-      await MediaLibrary.saveToLibraryAsync(localUri);
-      if (localUri) {
-        Alert.alert("Saved!", "Your image has been saved to the gallery.");
+      if (!bytes) {
+        setSaving(false);
+        Alert.alert("Error", "Failed to render the image.");
+        return;
       }
+
+      // Write PNG bytes to temp file and save to media library
+      const file = new ExpoFile(Paths.cache, "mono-filter-export.png");
+      file.write(bytes);
+
+      await MediaLibrary.saveToLibraryAsync(file.uri);
+
+      setSaving(false);
+
+      const imgW = skiaImage.width();
+      Alert.alert(
+        "Saved!",
+        `Image saved at original resolution (${imgW}px wide).`,
+      );
     } catch (e) {
+      setSaving(false);
       console.log(e);
       Alert.alert("Error", "Failed to save the image.");
     }
   };
-
-  const colorScheme = useColorScheme();
-  const themeContainerStyle = styles.lightContainer; // Force light theme container
-  const iconColor = "#000000"; // Force black icons
-
-  const { width, height } = Dimensions.get("window");
-
-  // Adaptive Sizing Logic
-  const MAX_WIDTH = width - 20; // 10px padding on each side (tighter)
-  const MAX_HEIGHT = height * 0.75; // Uses more vertical space
-
-  let canvasWidth = MAX_WIDTH;
-  let canvasHeight = canvasWidth / state.aspectRatio;
-
-  // If height exceeds max allowed (e.g. portrait), scale down to fit height
-  if (canvasHeight > MAX_HEIGHT) {
-    canvasHeight = MAX_HEIGHT;
-    canvasWidth = canvasHeight * state.aspectRatio;
-  }
 
   return (
     <SafeAreaView style={[styles.container, themeContainerStyle]}>
@@ -113,9 +145,9 @@ export default function PhotoEditor() {
         )}
       </View>
 
-      <View style={styles.canvasWrapper}>
-        <View style={styles.shadowContainer}>
-          <View ref={viewRef} collapsable={false}>
+      <View style={styles.canvasWrapper} pointerEvents="box-none">
+        <View style={styles.shadowContainer} pointerEvents="box-none">
+          <View ref={viewRef} collapsable={false} pointerEvents="box-none">
             <FrameCanvas
               containerWidth={canvasWidth}
               containerHeight={canvasHeight}
@@ -129,6 +161,14 @@ export default function PhotoEditor() {
           <ControlPanel />
         </View>
       )}
+
+      {/* Full-screen loading overlay */}
+      <Modal visible={saving} transparent animationType="fade">
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.loadingText}>Saving...</Text>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -182,5 +222,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 20,
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#ffffff",
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: "500",
   },
 });

@@ -1,8 +1,10 @@
 import {
   Canvas,
   ColorMatrix,
+  FilterMode,
   Group,
   Image,
+  MipmapMode,
   Rect,
   RuntimeShader,
   Skia,
@@ -34,6 +36,10 @@ const FILTERS: { [key: string]: number[] } = {
   Grayscale: [
     0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152,
     0.0722, 0, 0, 0, 0, 0, 1, 0,
+  ],
+  "Film BW": [
+    0.2445, 0.8225, 0.083, 0, -0.12, 0.2445, 0.8225, 0.083, 0, -0.12, 0.2445,
+    0.8225, 0.083, 0, -0.12, 0, 0, 0, 1, 0,
   ],
   Invert: [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0],
   Warm: [1.06, 0, 0, 0, 0, 0, 1.01, 0, 0, 0, 0, 0, 0.93, 0, 0, 0, 0, 0, 1, 0],
@@ -201,84 +207,90 @@ export default function FrameCanvas({
   return (
     <View style={{ width: containerWidth, height: containerHeight }}>
       <GestureDetector gesture={composedGesture}>
-        <Animated.View style={{ flex: 1 }}>
-          <Canvas style={{ flex: 1 }}>
-            {/* Draw Frame Background */}
-            <Rect
-              x={frameX}
-              y={frameY}
-              width={frameDisplayWidth}
-              height={frameDisplayHeight}
-              color={frameColor}
-            />
-
-            {/* Draw Image Content with Clipping */}
-            <Group
-              clip={{ x: imageX, y: imageY, width: imageW, height: imageH }}
-            >
-              {/* Background behind the image (seen if transparent image or loading) */}
+        <Animated.View style={{ flex: 1 }} collapsable={false}>
+          <View style={{ flex: 1 }} pointerEvents="none">
+            <Canvas style={{ flex: 1 }}>
+              {/* Draw Frame Background */}
               <Rect
-                x={imageX}
-                y={imageY}
-                width={imageW}
-                height={imageH}
-                color={backgroundColor}
+                x={frameX}
+                y={frameY}
+                width={frameDisplayWidth}
+                height={frameDisplayHeight}
+                color={frameColor}
               />
 
-              {skiaImage && (
-                <Image
-                  image={skiaImage}
-                  x={renderX}
-                  y={renderY}
-                  width={renderW}
-                  height={renderH}
-                  fit="fill"
-                  transform={transform}
-                >
-                  {FILTERS[filterType] && (
-                    <ColorMatrix matrix={FILTERS[filterType]} />
-                  )}
-                </Image>
-              )}
-
-              {/* Grain Layer */}
-              {grainStrength > 0 && grainEffect && (
+              {/* Draw Image Content with Clipping */}
+              <Group
+                clip={{ x: imageX, y: imageY, width: imageW, height: imageH }}
+              >
+                {/* Background behind the image (seen if transparent image or loading) */}
                 <Rect
                   x={imageX}
                   y={imageY}
                   width={imageW}
                   height={imageH}
-                  blendMode="overlay"
-                >
-                  <RuntimeShader
-                    source={grainEffect}
-                    uniforms={{
-                      intensity: grainStrength,
-                    }}
-                  />
-                </Rect>
-              )}
+                  color={backgroundColor}
+                />
 
-              {/* Vignette Layer */}
-              {vignetteStrength > 0 && vignetteEffect && (
-                <Rect
-                  x={imageX}
-                  y={imageY}
-                  width={imageW}
-                  height={imageH}
-                  blendMode="srcOver"
-                >
-                  <RuntimeShader
-                    source={vignetteEffect}
-                    uniforms={{
-                      resolution: [imageW, imageH],
-                      intensity: vignetteStrength,
+                {skiaImage && (
+                  <Image
+                    image={skiaImage}
+                    x={renderX}
+                    y={renderY}
+                    width={renderW}
+                    height={renderH}
+                    fit="fill"
+                    transform={transform}
+                    sampling={{
+                      filter: FilterMode.Linear,
+                      mipmap: MipmapMode.Linear,
                     }}
-                  />
-                </Rect>
-              )}
-            </Group>
-          </Canvas>
+                  >
+                    {FILTERS[filterType] && (
+                      <ColorMatrix matrix={FILTERS[filterType]} />
+                    )}
+                  </Image>
+                )}
+
+                {/* Grain Layer */}
+                {grainStrength > 0 && grainEffect && (
+                  <Rect
+                    x={imageX}
+                    y={imageY}
+                    width={imageW}
+                    height={imageH}
+                    blendMode="overlay"
+                  >
+                    <RuntimeShader
+                      source={grainEffect}
+                      uniforms={{
+                        intensity: grainStrength,
+                      }}
+                    />
+                  </Rect>
+                )}
+
+                {/* Vignette Layer */}
+                {vignetteStrength > 0 && vignetteEffect && (
+                  <Rect
+                    x={imageX}
+                    y={imageY}
+                    width={imageW}
+                    height={imageH}
+                    blendMode="srcOver"
+                  >
+                    <RuntimeShader
+                      source={vignetteEffect}
+                      uniforms={{
+                        resolution: [imageW, imageH],
+                        intensity: vignetteStrength,
+                      }}
+                    />
+                  </Rect>
+                )}
+              </Group>
+            </Canvas>
+          </View>
         </Animated.View>
       </GestureDetector>
     </View>
