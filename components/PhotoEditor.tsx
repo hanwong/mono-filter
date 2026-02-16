@@ -163,27 +163,27 @@ export default function PhotoEditor() {
         )}
         {/* Logo centered on screen */}
         <View style={styles.logoCentered} pointerEvents="none">
-          <Svg width={150} height={40} viewBox="0 0 300 80">
+          <Svg width={150} height={40} viewBox="0 0 240 80">
             {/* Outer thin black border */}
             <Rect
               x={2}
               y={2}
-              width={296}
+              width={236}
               height={76}
               fill="none"
               stroke="#000"
               strokeWidth={4}
             />
             {/* Black fill with white frame gap */}
-            <Rect x={9} y={9} width={282} height={62} fill="#000" />
+            <Rect x={9} y={9} width={222} height={62} fill="#000" />
             <SvgText
-              x={150}
+              x={120}
               y={54}
               textAnchor="middle"
               fontFamily="Helvetica Neue"
               fontSize={38}
               fontWeight="800"
-              letterSpacing={1}
+              letterSpacing={0.5}
               fill="#fff"
             >
               Mono.F.F
