@@ -175,15 +175,15 @@ export default function PhotoEditor() {
               strokeWidth={4}
             />
             {/* Black fill with white frame gap */}
-            <Rect x={10} y={10} width={280} height={60} fill="#000" />
+            <Rect x={9} y={9} width={282} height={62} fill="#000" />
             <SvgText
               x={150}
-              y={53}
+              y={54}
               textAnchor="middle"
               fontFamily="Helvetica Neue"
-              fontSize={34}
+              fontSize={38}
               fontWeight="800"
-              letterSpacing={2}
+              letterSpacing={1}
               fill="#fff"
             >
               Mono.F.F
