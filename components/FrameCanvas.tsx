@@ -18,6 +18,7 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
 } from "react-native-reanimated";
+import { IDENTITY } from "../constants/filters";
 
 import { GRAIN_SHADER, VIGNETTE_SHADER } from "../constants/shaders";
 import { editorStateAtom } from "../store/atoms";
@@ -26,25 +27,6 @@ interface FrameCanvasProps {
   containerWidth: number;
   containerHeight: number;
 }
-
-const FILTERS: { [key: string]: number[] } = {
-  None: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-  Sepia: [
-    0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131,
-    0, 0, 0, 0, 0, 1, 0,
-  ],
-  Grayscale: [
-    0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152,
-    0.0722, 0, 0, 0, 0, 0, 1, 0,
-  ],
-  "Film BW": [
-    0.2445, 0.8225, 0.083, 0, -0.12, 0.2445, 0.8225, 0.083, 0, -0.12, 0.2445,
-    0.8225, 0.083, 0, -0.12, 0, 0, 0, 1, 0,
-  ],
-  Invert: [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0],
-  Warm: [1.06, 0, 0, 0, 0, 0, 1.01, 0, 0, 0, 0, 0, 0.93, 0, 0, 0, 0, 0, 1, 0],
-  Cool: [0.95, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1.08, 0, 0, 0, 0, 0, 1, 0],
-};
 
 export default function FrameCanvas({
   containerWidth,
@@ -56,7 +38,7 @@ export default function FrameCanvas({
     frameColor,
     frameWidth,
     aspectRatio,
-    filterType,
+    filterMatrix,
     backgroundColor,
     grain: grainStrength,
     vignette: vignetteStrength,
@@ -246,8 +228,8 @@ export default function FrameCanvas({
                       mipmap: MipmapMode.Linear,
                     }}
                   >
-                    {FILTERS[filterType] && (
-                      <ColorMatrix matrix={FILTERS[filterType]} />
+                    {filterMatrix !== IDENTITY && (
+                      <ColorMatrix matrix={filterMatrix} />
                     )}
                   </Image>
                 )}

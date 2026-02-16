@@ -6,26 +6,8 @@ import {
   type SkImage,
 } from "@shopify/react-native-skia";
 
+import { IDENTITY } from "../constants/filters";
 import { GRAIN_SHADER, VIGNETTE_SHADER } from "../constants/shaders";
-
-const FILTERS: { [key: string]: number[] } = {
-  None: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-  Sepia: [
-    0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131,
-    0, 0, 0, 0, 0, 1, 0,
-  ],
-  Grayscale: [
-    0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152,
-    0.0722, 0, 0, 0, 0, 0, 1, 0,
-  ],
-  "Film BW": [
-    0.2445, 0.8225, 0.083, 0, -0.12, 0.2445, 0.8225, 0.083, 0, -0.12, 0.2445,
-    0.8225, 0.083, 0, -0.12, 0, 0, 0, 1, 0,
-  ],
-  Invert: [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0],
-  Warm: [1.06, 0, 0, 0, 0, 0, 1.01, 0, 0, 0, 0, 0, 0.93, 0, 0, 0, 0, 0, 1, 0],
-  Cool: [0.95, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1.08, 0, 0, 0, 0, 0, 1, 0],
-};
 
 export interface RenderParams {
   image: SkImage;
@@ -33,7 +15,7 @@ export interface RenderParams {
   frameWidth: number; // percentage (0-50)
   frameColor: string;
   backgroundColor: string;
-  filterType: string;
+  filterMatrix: number[];
   grain: number;
   vignette: number;
 }
@@ -49,7 +31,7 @@ export function renderOffscreen(params: RenderParams): Uint8Array | null {
     frameWidth,
     frameColor,
     backgroundColor,
-    filterType,
+    filterMatrix,
     grain,
     vignette,
   } = params;
@@ -131,8 +113,7 @@ export function renderOffscreen(params: RenderParams): Uint8Array | null {
 
   // 6. Draw image with color filter
   const imgPaint = Skia.Paint();
-  const filterMatrix = FILTERS[filterType];
-  if (filterMatrix && filterType !== "None") {
+  if (filterMatrix !== IDENTITY) {
     const cf = Skia.ColorFilter.MakeMatrix(filterMatrix);
     imgPaint.setColorFilter(cf);
   }

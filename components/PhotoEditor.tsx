@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useImage } from "@shopify/react-native-skia";
 import { File as ExpoFile, Paths } from "expo-file-system";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
@@ -18,6 +19,7 @@ import {
   View,
 } from "react-native";
 
+import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";
 import { renderOffscreen } from "../utils/offscreenRender";
 import ControlPanel from "./ControlPanel";
@@ -46,13 +48,29 @@ export default function PhotoEditor() {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled) {
-      setImageWithReset(result.assets[0].uri);
+      const pickedUri = result.assets[0].uri;
+      // Convert to JPEG (Skia can't decode HEIC) + generate small thumbnail for previews
+      const [fullImage, thumbnail] = await Promise.all([
+        ImageManipulator.manipulateAsync(pickedUri, [], {
+          compress: 1,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }),
+        ImageManipulator.manipulateAsync(
+          pickedUri,
+          [{ resize: { width: 200 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+        ),
+      ]);
+      setImageWithReset({
+        uri: fullImage.uri,
+        thumbnailUri: thumbnail.uri,
+      });
     }
   };
 
@@ -100,7 +118,7 @@ export default function PhotoEditor() {
         frameWidth: state.frameWidth,
         frameColor: state.frameColor,
         backgroundColor: state.backgroundColor,
-        filterType: state.filterType,
+        filterMatrix: state.filterMatrix,
         grain: state.grain,
         vignette: state.vignette,
       });
@@ -143,17 +161,61 @@ export default function PhotoEditor() {
             <Ionicons name="download-outline" size={28} color={iconColor} />
           </TouchableOpacity>
         )}
+        {/* Logo centered on screen */}
+        <View style={styles.logoCentered} pointerEvents="none">
+          <Svg width={150} height={40} viewBox="0 0 300 80">
+            {/* Outer thin black border */}
+            <Rect
+              x={2}
+              y={2}
+              width={296}
+              height={76}
+              fill="none"
+              stroke="#000"
+              strokeWidth={4}
+            />
+            {/* Black fill with white frame gap */}
+            <Rect x={10} y={10} width={280} height={60} fill="#000" />
+            <SvgText
+              x={150}
+              y={53}
+              textAnchor="middle"
+              fontFamily="Helvetica Neue"
+              fontSize={34}
+              fontWeight="800"
+              letterSpacing={2}
+              fill="#fff"
+            >
+              Mono.F.F
+            </SvgText>
+          </Svg>
+        </View>
       </View>
 
       <View style={styles.canvasWrapper} pointerEvents="box-none">
-        <View style={styles.shadowContainer} pointerEvents="box-none">
-          <View ref={viewRef} collapsable={false} pointerEvents="box-none">
-            <FrameCanvas
-              containerWidth={canvasWidth}
-              containerHeight={canvasHeight}
-            />
+        {imageUri ? (
+          <View style={styles.shadowContainer} pointerEvents="box-none">
+            <View ref={viewRef} collapsable={false} pointerEvents="box-none">
+              <FrameCanvas
+                containerWidth={canvasWidth}
+                containerHeight={canvasHeight}
+              />
+            </View>
           </View>
-        </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.placeholder}
+            onPress={pickImage}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="camera-outline" size={48} color="#ccc" />
+            <Text style={styles.placeholderText}>Select a photo</Text>
+            <Text style={styles.placeholderSub}>
+              Add custom frames and apply{"\n"}film-inspired filters to your
+              photos
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {imageUri && <ControlPanel />}
@@ -182,20 +244,44 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     zIndex: 10,
   },
+  logoCentered: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   iconButton: {
     padding: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(128, 128, 128, 0.1)", // Subtle background for touch target
   },
   canvasWrapper: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingBottom: 48,
+  },
+  placeholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  placeholderText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#aaa",
+  },
+  placeholderSub: {
+    fontSize: 13,
+    color: "#ccc",
+    textAlign: "center",
+    lineHeight: 20,
   },
   shadowContainer: {
     shadowColor: "#000",
