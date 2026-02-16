@@ -6,7 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 import { useAtom, useSetAtom } from "jotai";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  AdEventType,
+  InterstitialAd,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";
@@ -91,7 +96,35 @@ export default function PhotoEditor() {
     canvasWidth = canvasHeight * state.aspectRatio;
   }
 
-  const saveImage = async () => {
+  /* AdMob Logic */
+  const [interstitial, setInterstitial] = useState<InterstitialAd | null>(null);
+  const [adLoaded, setAdLoaded] = useState(false);
+
+  useEffect(() => {
+    const ad = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+
+    const unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
+      setAdLoaded(true);
+    });
+
+    const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+      setAdLoaded(false);
+      ad.load(); // Preload next ad
+      processSaveImage(); // Continue save after ad closed
+    });
+
+    ad.load();
+    setInterstitial(ad);
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeClosed();
+    };
+  }, []);
+
+  const processSaveImage = async () => {
     if (!imageUri || !skiaImage) return;
 
     try {
@@ -146,6 +179,14 @@ export default function PhotoEditor() {
       setSaving(false);
       console.log(e);
       Alert.alert("Error", "Failed to save the image.");
+    }
+  };
+
+  const saveImage = async () => {
+    if (adLoaded && interstitial) {
+      interstitial.show();
+    } else {
+      processSaveImage();
     }
   };
 
