@@ -14,12 +14,12 @@ import {
   Dimensions,
   Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";

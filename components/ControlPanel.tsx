@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import FilterControls from "./FilterControls";
 import FrameControls from "./FrameControls";
@@ -33,8 +34,10 @@ export default function ControlPanel() {
     overflow: "hidden" as const,
   }));
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Drawer content with blur background */}
       <Animated.View style={[styles.drawer, drawerStyle]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -112,7 +115,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: "#000000",
+    borderBottomWidth: 1,
+    borderColor: "#000000",
   },
   tabButtonRight: {
     borderLeftWidth: 1,
