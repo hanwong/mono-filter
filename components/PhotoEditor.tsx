@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useImage } from "@shopify/react-native-skia";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { File as ExpoFile, Paths } from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -19,11 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  AdEventType,
-  InterstitialAd,
-  TestIds,
-} from "react-native-google-mobile-ads";
 
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { editorStateAtom, setImageWithResetAtom } from "../store/atoms";
@@ -98,56 +94,83 @@ export default function PhotoEditor() {
   }
 
   /* AdMob Logic */
-  const [interstitial, setInterstitial] = useState<InterstitialAd | null>(null);
+  const [interstitial, setInterstitial] = useState<any>(null);
   const [adLoaded, setAdLoaded] = useState(false);
+  const [isAdMobAvailable, setIsAdMobAvailable] = useState(false);
 
   useEffect(() => {
-    // Determine Ad Unit ID based on platform
-    let adUnitId = TestIds.INTERSTITIAL;
+    let ad: any = null;
+    let unsubscribeLoaded: any = null;
+    let unsubscribeClosed: any = null;
 
-    if (__DEV__) {
-      // Use test IDs in development unless explicitly overridden?
-      // User requested REAL IDs. So we check env vars first.
-    }
+    const initAdMob = async () => {
+      try {
+        // Skip AdMob in Expo Go to avoid crash
+        if (
+          Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+        ) {
+          console.log("AdMob skipped in Expo Go");
+          setIsAdMobAvailable(false);
+          return;
+        }
 
-    if (Platform.OS === "ios") {
-      adUnitId =
-        process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID ||
-        TestIds.INTERSTITIAL;
-    } else if (Platform.OS === "android") {
-      adUnitId =
-        process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID ||
-        TestIds.INTERSTITIAL;
-    }
+        // Dynamic import to avoid crash in Expo Go
 
-    // Safety check: if env var is placeholder, fallback to TestId to avoid crash
-    if (adUnitId && adUnitId.includes("xxxxxxxx")) {
-      console.warn(
-        "AdMob: Using TestIds because env vars contain placeholders",
-      );
-      adUnitId = TestIds.INTERSTITIAL;
-    }
+        const {
+          InterstitialAd,
+          AdEventType,
+          TestIds,
+        } = require("react-native-google-mobile-ads");
+        setIsAdMobAvailable(true);
 
-    const ad = InterstitialAd.createForAdRequest(adUnitId, {
-      requestNonPersonalizedAdsOnly: true,
-    });
+        // Determine Ad Unit ID based on platform
+        let adUnitId = TestIds.INTERSTITIAL;
 
-    const unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
-      setAdLoaded(true);
-    });
+        if (Platform.OS === "ios") {
+          adUnitId =
+            process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID ||
+            TestIds.INTERSTITIAL;
+        } else if (Platform.OS === "android") {
+          adUnitId =
+            process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID ||
+            TestIds.INTERSTITIAL;
+        }
 
-    const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
-      setAdLoaded(false);
-      ad.load(); // Preload next ad
-      processSaveImage(); // Continue save after ad closed
-    });
+        if (adUnitId && adUnitId.includes("xxxxxxxx")) {
+          console.warn(
+            "AdMob: Using TestIds because env vars contain placeholders",
+          );
+          adUnitId = TestIds.INTERSTITIAL;
+        }
 
-    ad.load();
-    setInterstitial(ad);
+        ad = InterstitialAd.createForAdRequest(adUnitId, {
+          requestNonPersonalizedAdsOnly: true,
+        });
+
+        unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
+          setAdLoaded(true);
+        });
+
+        unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+          setAdLoaded(false);
+          setInterstitial(null);
+          // Reload ad
+          ad.load();
+        });
+
+        ad.load();
+        setInterstitial(ad);
+      } catch (error) {
+        console.warn("AdMob not available (likely running in Expo Go):", error);
+        setIsAdMobAvailable(false);
+      }
+    };
+
+    initAdMob();
 
     return () => {
-      unsubscribeLoaded();
-      unsubscribeClosed();
+      if (unsubscribeLoaded) unsubscribeLoaded();
+      if (unsubscribeClosed) unsubscribeClosed();
     };
   }, []);
 
@@ -210,7 +233,7 @@ export default function PhotoEditor() {
   };
 
   const saveImage = async () => {
-    if (adLoaded && interstitial) {
+    if (isAdMobAvailable && adLoaded && interstitial) {
       interstitial.show();
     } else {
       processSaveImage();
