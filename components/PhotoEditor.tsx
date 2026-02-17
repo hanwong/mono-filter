@@ -12,6 +12,7 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -101,7 +102,33 @@ export default function PhotoEditor() {
   const [adLoaded, setAdLoaded] = useState(false);
 
   useEffect(() => {
-    const ad = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL, {
+    // Determine Ad Unit ID based on platform
+    let adUnitId = TestIds.INTERSTITIAL;
+
+    if (__DEV__) {
+      // Use test IDs in development unless explicitly overridden?
+      // User requested REAL IDs. So we check env vars first.
+    }
+
+    if (Platform.OS === "ios") {
+      adUnitId =
+        process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID ||
+        TestIds.INTERSTITIAL;
+    } else if (Platform.OS === "android") {
+      adUnitId =
+        process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID ||
+        TestIds.INTERSTITIAL;
+    }
+
+    // Safety check: if env var is placeholder, fallback to TestId to avoid crash
+    if (adUnitId && adUnitId.includes("xxxxxxxx")) {
+      console.warn(
+        "AdMob: Using TestIds because env vars contain placeholders",
+      );
+      adUnitId = TestIds.INTERSTITIAL;
+    }
+
+    const ad = InterstitialAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: true,
     });
 
