@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "mono-filter",
-    "slug": "mono-filter",
+    "name": "Mono.F.F",
+    "slug": "MonoFF",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "monofilter",
+    "scheme": "monoff",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hanwong.monofilter",
+      "bundleIdentifier": "ours.co.monoff",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.hanwong.monofilter"
+      "package": "ours.co.monoff"
     },
     "web": {
       "output": "static",
