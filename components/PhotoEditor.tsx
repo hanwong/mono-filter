@@ -106,11 +106,12 @@ export default function PhotoEditor() {
 
     const initAdMob = async () => {
       try {
-        // Skip AdMob in Expo Go to avoid crash
+        // Skip AdMob in Expo Go and on Web platforms to avoid compilation/runtime crashes
         if (
-          Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+          Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+          Platform.OS === "web"
         ) {
-          console.log("AdMob skipped in Expo Go");
+          console.log("AdMob skipped in Expo Go or Web");
           setIsAdMobAvailable(false);
           return;
         }
