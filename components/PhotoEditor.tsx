@@ -102,6 +102,7 @@ export default function PhotoEditor() {
     let ad: any = null;
     let unsubscribeLoaded: any = null;
     let unsubscribeClosed: any = null;
+    let unsubscribeError: any = null;
 
     const initAdMob = async () => {
       try {
@@ -120,8 +121,12 @@ export default function PhotoEditor() {
           InterstitialAd,
           AdEventType,
           TestIds,
+          default: mobileAds,
         } = require("react-native-google-mobile-ads");
         setIsAdMobAvailable(true);
+
+        // Required: Initialize Google Mobile Ads SDK before loading ads
+        await mobileAds().initialize();
 
         // Determine Ad Unit ID based on platform
         let adUnitId = TestIds.INTERSTITIAL;
@@ -151,6 +156,15 @@ export default function PhotoEditor() {
           setAdLoaded(true);
         });
 
+        // Add ERROR listener to debug failures in TestFlight
+        unsubscribeError = ad.addAdEventListener(
+          AdEventType.ERROR,
+          (error: any) => {
+            console.warn("AdMob Interstitial failed to load: ", error);
+            setAdLoaded(false);
+          },
+        );
+
         unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
           setAdLoaded(false);
           setInterstitial(null);
@@ -171,6 +185,7 @@ export default function PhotoEditor() {
     return () => {
       if (unsubscribeLoaded) unsubscribeLoaded();
       if (unsubscribeClosed) unsubscribeClosed();
+      if (unsubscribeError) unsubscribeError();
     };
   }, []);
 
