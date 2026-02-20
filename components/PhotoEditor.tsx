@@ -134,12 +134,13 @@ export default function PhotoEditor() {
 
         if (Platform.OS === "ios") {
           adUnitId =
-            process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID ||
+            (process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID || "").trim() ||
             TestIds.INTERSTITIAL;
         } else if (Platform.OS === "android") {
           adUnitId =
-            process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID ||
-            TestIds.INTERSTITIAL;
+            (
+              process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID || ""
+            ).trim() || TestIds.INTERSTITIAL;
         }
 
         if (adUnitId && adUnitId.includes("xxxxxxxx")) {
@@ -161,7 +162,10 @@ export default function PhotoEditor() {
         unsubscribeError = ad.addAdEventListener(
           AdEventType.ERROR,
           (error: any) => {
-            Alert.alert("AdMob Error", JSON.stringify(error?.message || error));
+            Alert.alert(
+              "AdMob Error",
+              `ID tested: [${adUnitId}]\n${error?.message || error}`,
+            );
             console.warn("AdMob Interstitial failed to load: ", error);
             setAdLoaded(false);
           },
