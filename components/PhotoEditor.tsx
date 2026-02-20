@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useImage } from "@shopify/react-native-skia";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { File as ExpoFile, Paths } from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -105,6 +106,16 @@ export default function PhotoEditor() {
 
     const initAdMob = async () => {
       try {
+        // Skip AdMob in Expo Go and on Web platforms to avoid compilation/runtime crashes
+        if (
+          Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+          Platform.OS === "web"
+        ) {
+          console.log("AdMob skipped in Expo Go or Web");
+          setIsAdMobAvailable(false);
+          return;
+        }
+
         // Dynamic import to avoid crash in Expo Go
 
         const {
@@ -150,6 +161,7 @@ export default function PhotoEditor() {
         unsubscribeError = ad.addAdEventListener(
           AdEventType.ERROR,
           (error: any) => {
+            Alert.alert("AdMob Error", JSON.stringify(error?.message || error));
             console.warn("AdMob Interstitial failed to load: ", error);
             setAdLoaded(false);
           },
