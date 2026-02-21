@@ -98,6 +98,9 @@ export default function PhotoEditor() {
   const [adLoaded, setAdLoaded] = useState(false);
   const [isAdMobAvailable, setIsAdMobAvailable] = useState(false);
 
+  // Track if user clicked save and is waiting for ad to finish
+  const [isWaitingToSave, setIsWaitingToSave] = useState(false);
+
   useEffect(() => {
     let ad: any = null;
     let unsubscribeLoaded: any = null;
@@ -185,8 +188,9 @@ export default function PhotoEditor() {
 
         unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
           setAdLoaded(false);
-          setInterstitial(null);
-          // Reload ad
+          // Ad was closed. Now we can proceed with saving.
+          setIsWaitingToSave(true);
+          // Reload next ad into existing interstitial container
           ad.load();
         });
 
@@ -206,6 +210,14 @@ export default function PhotoEditor() {
       if (unsubscribeError) unsubscribeError();
     };
   }, []);
+
+  // When the ad is closed, setIsWaitingToSave is true. Trigger the actual save.
+  useEffect(() => {
+    if (isWaitingToSave) {
+      processSaveImage();
+      setIsWaitingToSave(false);
+    }
+  }, [isWaitingToSave]);
 
   const processSaveImage = async () => {
     if (!imageUri || !skiaImage) return;
@@ -267,8 +279,10 @@ export default function PhotoEditor() {
 
   const saveImage = async () => {
     if (isAdMobAvailable && adLoaded && interstitial) {
+      // Show the ad. The CLOSED listener will trigger processSaveImage.
       interstitial.show();
     } else {
+      // No ad available, just save immediately
       processSaveImage();
     }
   };
