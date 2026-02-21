@@ -9,9 +9,24 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    const hideSplash = async () => {
+      // Enforce a minimum 3-second delay
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await SplashScreen.hideAsync();
+    };
+
+    hideSplash();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
