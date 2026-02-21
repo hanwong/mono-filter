@@ -15,6 +15,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: "ours.co.monoff",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSUserTrackingUsageDescription:
+        "This identifier will be used to deliver personalized ads to you. To test AdMob correctly on TestFlight, please allow tracking.",
     },
   },
   android: {

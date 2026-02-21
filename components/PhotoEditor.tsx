@@ -124,7 +124,19 @@ export default function PhotoEditor() {
           TestIds,
           default: mobileAds,
         } = require("react-native-google-mobile-ads");
+        const {
+          requestTrackingPermissionsAsync,
+        } = require("expo-tracking-transparency");
+
         setIsAdMobAvailable(true);
+
+        // Required: Request ATT Permission to load IDFA before SDK init
+        const { status } = await requestTrackingPermissionsAsync();
+        if (status !== "granted") {
+          console.warn(
+            "Tracking permission not granted. AdMob may not recognize test devices.",
+          );
+        }
 
         // Required: Initialize Google Mobile Ads SDK before loading ads
         await mobileAds().initialize();
