@@ -20,8 +20,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     const hideSplash = async () => {
-      // Enforce a minimum 3-second delay
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Enforce a minimum 1.5-second delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       await SplashScreen.hideAsync();
     };
 
