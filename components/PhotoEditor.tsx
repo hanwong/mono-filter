@@ -177,10 +177,6 @@ export default function PhotoEditor() {
         unsubscribeError = ad.addAdEventListener(
           AdEventType.ERROR,
           (error: any) => {
-            Alert.alert(
-              "AdMob Error",
-              `ID tested: [${adUnitId}]\n${error?.message || error}`,
-            );
             console.warn("AdMob Interstitial failed to load: ", error);
             setAdLoaded(false);
           },
