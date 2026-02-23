@@ -263,8 +263,8 @@ export default function PhotoEditor() {
 
       const imgW = skiaImage.width();
       Alert.alert(
-        "Saved!",
-        `Image saved at original resolution (${imgW}px wide).`,
+        "Saved! (저장 완료)",
+        `Image saved at original resolution (${imgW}px wide).\n\n광고를 시청해 주셔서 감사합니다. 저장 시에는 광고가 노출됩니다.`,
       );
     } catch (e) {
       setSaving(false);
