@@ -17,6 +17,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       NSUserTrackingUsageDescription:
         "This identifier will be used to deliver personalized ads to you. To test AdMob correctly on TestFlight, please allow tracking.",
+      NSPhotoLibraryUsageDescription:
+        "Mono.F.F needs access to your photo library to let you select an image for editing and applying vintage filters.",
+      NSPhotoLibraryAddUsageDescription:
+        "Mono.F.F needs permission to save photos to your library so you can export and keep the edited images you create.",
+      NSCameraUsageDescription:
+        "Mono.F.F requires camera access to allow you to take a photo directly within the app for immediate editing and filtering.",
     },
   },
   android: {
@@ -54,6 +60,24 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         iosAppId:
           process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ||
           "ca-app-pub-3940256099942544~1458002511", // Fallback to Test ID
+      },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission:
+          "Mono.F.F needs access to your photo library to let you select an image for editing and applying vintage filters.",
+        cameraPermission:
+          "Mono.F.F requires camera access to allow you to take a photo directly within the app for immediate editing and filtering.",
+      },
+    ],
+    [
+      "expo-media-library",
+      {
+        photosPermission:
+          "Mono.F.F needs access to your photo library to let you select an image for editing and applying vintage filters.",
+        savePhotosPermission:
+          "Mono.F.F needs permission to save photos to your library so you can export and keep the edited images you create.",
       },
     ],
   ],
