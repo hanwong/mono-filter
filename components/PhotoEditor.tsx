@@ -210,12 +210,12 @@ export default function PhotoEditor() {
   // When the ad is closed, setIsWaitingToSave is true. Trigger the actual save.
   useEffect(() => {
     if (isWaitingToSave) {
-      processSaveImage();
+      processSaveImage(true);
       setIsWaitingToSave(false);
     }
   }, [isWaitingToSave]);
 
-  const processSaveImage = async () => {
+  const processSaveImage = async (adShown: boolean = false) => {
     if (!imageUri || !skiaImage) return;
 
     try {
@@ -262,10 +262,11 @@ export default function PhotoEditor() {
       setSaving(false);
 
       const imgW = skiaImage.width();
-      Alert.alert(
-        "Saved!",
-        `Image saved at original resolution (${imgW}px wide).\n\nThank you for watching the ad. Ads will be shown upon saving.`,
-      );
+      const message = adShown
+        ? `Image saved at original resolution (${imgW}px wide).\n\nThank you for watching the ad. Ads will be shown upon saving.`
+        : `Image saved at original resolution (${imgW}px wide).`;
+
+      Alert.alert("Saved!", message);
     } catch (e) {
       setSaving(false);
       console.log(e);
@@ -279,7 +280,7 @@ export default function PhotoEditor() {
       interstitial.show();
     } else {
       // No ad available, just save immediately
-      processSaveImage();
+      processSaveImage(false);
     }
   };
 
