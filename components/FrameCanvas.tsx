@@ -74,8 +74,21 @@ export default function FrameCanvas({
     })
     .onUpdate((e) => {
       if (isPinching.value) return;
-      translationX.value = savedTranslationX.value + e.translationX;
-      translationY.value = savedTranslationY.value + e.translationY;
+
+      let newX = savedTranslationX.value + e.translationX;
+      let newY = savedTranslationY.value + e.translationY;
+
+      const SNAP_THRESHOLD = 20;
+
+      if (Math.abs(newX) < SNAP_THRESHOLD) {
+        newX = 0;
+      }
+      if (Math.abs(newY) < SNAP_THRESHOLD) {
+        newY = 0;
+      }
+
+      translationX.value = newX;
+      translationY.value = newY;
     });
 
   const pinchGesture = Gesture.Pinch()
